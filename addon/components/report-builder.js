@@ -73,6 +73,30 @@ export default class ReportBuilderComponent extends Component {
         }
     }
 
+    @action async export(format = 'csv') {
+        if (!this.result) {
+            return;
+        }
+
+        try {
+            const response = await this.fetch.post('reports/export-query', {
+                query_config: this.queryConfig,
+                format,
+                options: {},
+            });
+
+            if (response?.success === false) {
+                this.notifications.serverError(response);
+                return;
+            }
+
+            await this.fetch.download(`reports/export-download/${response.filename}`, {}, { method: 'GET' });
+            this.notifications.success('Report exported successfully');
+        } catch (err) {
+            this.notifications.serverError(err);
+        }
+    }
+
     @action setQueryConfig(queryConfig) {
         debug('[ReportBuilder QueryConfig]' + JSON.stringify(queryConfig, null, 2));
         this.queryConfig = queryConfig;

@@ -16,6 +16,7 @@
     <TabNavigation @tabs={{this.tabs}} @contextApi={{fn (mut this.tabContext)}}>
         <:actions>
             <div class="flex flex-row space-x-2 pr-2">
+                <ReportBuilder::ExportOptions @disabled={{not this.result}} @onExport={{this.export}} />
                 <Button @type="magic" @icon="play" @text="Execute" @size="xs" @onClick={{perform this.execute}} @isLoading={{this.execute.isRunning}} />
             </div>
         </:actions>
