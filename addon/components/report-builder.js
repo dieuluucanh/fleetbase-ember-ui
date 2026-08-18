@@ -17,6 +17,7 @@ export default class ReportBuilderComponent extends Component {
     @tracked tables = [];
     @tracked validationErrors = [];
     @tracked validationWarnings = [];
+    @tracked selectedTableRefreshable = null;
     @tracked tabs = [
         {
             id: 'configuration',
@@ -46,6 +47,8 @@ export default class ReportBuilderComponent extends Component {
                 })
             );
             this.tables = isArray(this.schema.tables) ? this.schema.tables : [];
+            // Sync refreshable status now that tables are loaded
+            this._syncRefreshableStatus();
         } catch (e) {
             this.notifications.error('Failed to load data sources');
         }
@@ -56,6 +59,25 @@ export default class ReportBuilderComponent extends Component {
         this.validationWarnings = [];
 
         try {
+            // Refresh the data source first if the selected table is refreshable
+            if (this.selectedTableRefreshable) {
+                const tableName = this.queryConfig?.table?.name;
+                if (!tableName) {
+                    this.notifications.error('No data source selected');
+                    return;
+                }
+
+                const refreshResult = yield this.fetch.post('reports/refresh-data-source', {
+                    table_name: tableName,
+                    date: 'today',
+                });
+
+                if (!refreshResult?.success) {
+                    this.notifications.error(refreshResult?.error?.message ?? 'Failed to refresh data source');
+                    return;
+                }
+            }
+
             const result = yield this.fetch.post('reports/execute-query', { query_config: this.queryConfig });
             this.result = result;
             this.updateReportResult(result);
@@ -101,6 +123,11 @@ export default class ReportBuilderComponent extends Component {
         debug('[ReportBuilder QueryConfig]' + JSON.stringify(queryConfig, null, 2));
         this.queryConfig = queryConfig;
 
+        // Detect selected table and update refreshable status
+        const tableName = queryConfig?.table?.name;
+        const table = this.tables.find((t) => t.name === tableName);
+        this.selectedTableRefreshable = table?.refreshable ?? null;
+
         if (this.args.report) {
             this.args.report.query_config = queryConfig;
         }
@@ -128,5 +155,22 @@ export default class ReportBuilderComponent extends Component {
                 meta: this.args.report?.meta ?? {},
             };
         }
+
+        // Initialize refreshable status if tables are already loaded
+        this._syncRefreshableStatus();
+    }
+
+    /**
+     * Sync the selectedTableRefreshable tracked property with the current
+     * query config table. Called after tables load and after query config changes.
+     */
+    _syncRefreshableStatus() {
+        const tableName = this.queryConfig?.table?.name;
+        if (!tableName || !this.tables.length) {
+            this.selectedTableRefreshable = null;
+            return;
+        }
+        const table = this.tables.find((t) => t.name === tableName);
+        this.selectedTableRefreshable = table?.refreshable ?? null;
     }
 }
