@@ -10,7 +10,7 @@ import { timeout, task } from 'ember-concurrency';
 export default class AutocompleteInputComponent extends Component {
     @service fetch;
     @tracked value;
-    @tracked fetchUrl = 'geocoder/query';
+    @tracked fetchUrl = 'geocoder/query-oss';
     @tracked searchParam = 'query';
     @tracked queryParams = {};
     @tracked results = [];
